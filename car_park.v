@@ -18,7 +18,7 @@ module car_parking_system
     // FSM logic
     always @(posedge clk or posedge reset) begin
         if (reset) begin
-            current_state <= IDLE;
+            current_state = IDLE;
             spots <= 4'b0000; // Initialize spots on reset
         end else begin
             current_state <= next_state;

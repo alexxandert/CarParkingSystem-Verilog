@@ -1,83 +1,114 @@
-module car_parking_system
-   (
-    input clk, reset, car_enter, car_leave,
-    output reg [3:0] available_slots,
-    output reg parking_full, spot_allocated
-);
+`timescale 1ns / 1ps
+module parking_system( 
+                input clk,reset_n,
+ input sensor_entrance, sensor_exit, 
+ input [1:0] password_1, password_2,
+ output wire GREEN_LED,RED_LED,
+ output reg [6:0] HEX_1, HEX_2
+    );
+ parameter IDLE = 3'b000, WAIT_PASSWORD = 3'b001, WRONG_PASS = 3'b010, RIGHT_PASS = 3'b011,STOP = 3'b100;
+ // Moore FSM : output just depends on the current state
+ reg[2:0] current_state, next_state;
+ reg[31:0] counter_wait;
+ reg red_tmp,green_tmp;
+ // Next state
+ always @(posedge clk or negedge reset_n)
+ begin
+ if(~reset_n) 
+ current_state = IDLE;
+ else
+ current_state = next_state;
+ end
+ // counter_wait
+ always @(posedge clk or negedge reset_n) 
+ begin
+ if(~reset_n) 
+ counter_wait <= 0;
+ else if(current_state==WAIT_PASSWORD)
+ counter_wait <= counter_wait + 1;
+ else 
+ counter_wait <= 0;
+ end
 
-    // Parameters
-    parameter NUM_SPOTS = 4; // Assuming 4 parking spots
-
-    // States for FSM
-    parameter IDLE = 2'b00, ALLOCATING = 2'b01, FULL = 2'b10;
-    reg [1:0] current_state, next_state;
-
-    reg [3:0] spots; // 1 means the spot is taken, 0 means it's free
-    reg [3:0] free_spot; // Indicate which spot is free when allocating
-
-    // FSM logic
-    always @(posedge clk or posedge reset) begin
-        if (reset) begin
-            current_state = IDLE;
-            spots <= 4'b0000; // Initialize spots on reset
-        end else begin
-            current_state <= next_state;
-        end
-    end
-
-     // Next state logic and spot allocation
-    always @(*) begin
-        spot_allocated = 0;
-        free_spot = 4'b0000;
-
-        case (current_state)
-            IDLE: begin
-                if (car_enter && spots != 4'b1111) // if car enters and spots are available
-                    next_state = ALLOCATING;
-                else if (spots == 4'b1111) // if all spots are taken
-                    next_state = FULL;
-                else
-                    next_state = IDLE;
-            end
-             ALLOCATING: begin
-    if (spots[0] == 0) {
-        free_spot = 4'b0001;
-    } else if (spots[1] == 0) {
-        free_spot = 4'b0010;
-    } else if (spots[2] == 0) {
-        free_spot = 4'b0100;
-    } else if (spots[3] == 0) {
-        free_spot = 4'b1000;
-    }
-    spot_allocated = 1;
-    next_state = IDLE;
-end
-  FULL: begin
-                if (car_leave) // if a car leaves
-                    next_state = IDLE;
-                else
-                    next_state = FULL;
-            end
-
-            default: next_state = IDLE;
-        endcase
-    end
-
-    // Update spots based on allocation and cars leaving
-    always @(posedge clk) begin
-        if (spot_allocated) begin
-            spots = spots | free_spot;
-        end
-        if (car_leave) begin
-            spots = spots & (~free_spot); // Free the spot that's left
-        end
-    end
-
-    // Calculate available slots
-    always @(*) begin
-        available_slots = NUM_SPOTS - $countones(spots);
-    end
-
-    assign parking_full = (available_slots == 0) ? 1'b1 : 1'b0;
+ always @(*)
+ begin
+ case(current_state)
+ IDLE: begin
+         if(sensor_entrance == 1)
+ next_state = WAIT_PASSWORD;
+ else
+ next_state = IDLE;
+ end
+ WAIT_PASSWORD: begin
+ if(counter_wait <= 3)
+ next_state = WAIT_PASSWORD;
+ else 
+ begin
+ if((password_1==2'b01)&&(password_2==2'b10))
+ next_state = RIGHT_PASS;
+ else
+ next_state = WRONG_PASS;
+ end
+ end
+ WRONG_PASS: begin
+ if((password_1==2'b01)&&(password_2==2'b10))
+ next_state = RIGHT_PASS;
+ else
+ next_state = WRONG_PASS;
+ end
+ RIGHT_PASS: begin
+ if(sensor_entrance==1 && sensor_exit == 1)
+ next_state = STOP;
+ else if(sensor_exit == 1)
+ next_state = IDLE;
+ else
+ next_state = RIGHT_PASS;
+ end
+ STOP: begin
+ if((password_1==2'b01)&&(password_2==2'b10))
+ next_state = RIGHT_PASS;
+ else
+ next_state = STOP;
+ end
+ default: next_state = IDLE;
+ endcase
+ end
+ // LEDs and output, change the period of blinking LEDs here
+ always @(posedge clk) begin 
+ case(current_state)
+ IDLE: begin
+ green_tmp = 1'b0;
+ red_tmp = 1'b0;
+ HEX_1 = 7'b1111111; // off
+ HEX_2 = 7'b1111111; // off
+ end
+ WAIT_PASSWORD: begin
+ green_tmp = 1'b0;
+ red_tmp = 1'b1;
+ HEX_1 = 7'b000_0110; // E
+ HEX_2 = 7'b010_1011; // n 
+ end
+ WRONG_PASS: begin
+ green_tmp = 1'b0;
+ red_tmp = ~red_tmp;
+ HEX_1 = 7'b000_0110; // E
+ HEX_2 = 7'b000_0110; // E 
+ end
+ RIGHT_PASS: begin
+ green_tmp = ~green_tmp;
+ red_tmp = 1'b0;
+ HEX_1 = 7'b000_0010; // 6
+ HEX_2 = 7'b100_0000; // 0 
+ end
+ STOP: begin
+ green_tmp = 1'b0;
+ red_tmp = ~red_tmp;
+ HEX_1 = 7'b001_0010; // 5
+ HEX_2 = 7'b000_1100; // P 
+ end
+ endcase
+ end
+ assign RED_LED = red_tmp  ;
+ assign GREEN_LED = green_tmp;
 
 endmodule

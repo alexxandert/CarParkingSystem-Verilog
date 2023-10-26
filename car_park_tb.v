@@ -12,8 +12,6 @@ module tb_parking_system;
   // Outputs
   wire GREEN_LED;
   wire RED_LED;
-  wire [6:0] HEX_1;
-  wire [6:0] HEX_2;
 
   // Instantiate the Unit Under Test (UUT)
   parking_system uut (
@@ -25,8 +23,6 @@ module tb_parking_system;
   .password_2(password_2), 
   .GREEN_LED(GREEN_LED), 
   .RED_LED(RED_LED), 
-  .HEX_1(HEX_1), 
- .HEX_2(HEX_2)
  );
  initial begin
  clk = 0;

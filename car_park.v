@@ -4,7 +4,6 @@ module parking_system(
  input sensor_entrance, sensor_exit, 
  input [1:0] password_1, password_2,
  output wire GREEN_LED,RED_LED,
- output reg [6:0] HEX_1, HEX_2
     );
  parameter IDLE = 3'b000, WAIT_PASSWORD = 3'b001, WRONG_PASS = 3'b010, RIGHT_PASS = 3'b011,STOP = 3'b100;
  // Moore FSM : output just depends on the current state
@@ -40,7 +39,7 @@ module parking_system(
  next_state = IDLE;
  end
  WAIT_PASSWORD: begin
- if(counter_wait <= 3)
+   if(counter_wait <= 3000000000)
  next_state = WAIT_PASSWORD;
  else 
  begin
@@ -59,7 +58,7 @@ module parking_system(
  RIGHT_PASS: begin
  if(sensor_entrance==1 && sensor_exit == 1)
  next_state = STOP;
- else if(sensor_exit == 1)
+   else if(sensor_entrance == 1)
  next_state = IDLE;
  else
  next_state = RIGHT_PASS;
@@ -79,32 +78,22 @@ module parking_system(
  IDLE: begin
  green_tmp = 1'b0;
  red_tmp = 1'b0;
- HEX_1 = 7'b1111111; // off
- HEX_2 = 7'b1111111; // off
  end
  WAIT_PASSWORD: begin
  green_tmp = 1'b0;
  red_tmp = 1'b1;
- HEX_1 = 7'b000_0110; // E
- HEX_2 = 7'b010_1011; // n 
  end
  WRONG_PASS: begin
  green_tmp = 1'b0;
  red_tmp = ~red_tmp;
- HEX_1 = 7'b000_0110; // E
- HEX_2 = 7'b000_0110; // E 
  end
  RIGHT_PASS: begin
  green_tmp = ~green_tmp;
  red_tmp = 1'b0;
- HEX_1 = 7'b000_0010; // 6
- HEX_2 = 7'b100_0000; // 0 
  end
  STOP: begin
  green_tmp = 1'b0;
  red_tmp = ~red_tmp;
- HEX_1 = 7'b001_0010; // 5
- HEX_2 = 7'b000_1100; // P 
  end
  endcase
  end
